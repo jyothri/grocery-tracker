@@ -24,7 +24,7 @@ export default async function route(req: IncomingMessage, res: ServerResponse): 
   }
 
   // Define routes that can be handled
-  const routes: Array<[string, string, (arg0: string) => Promise<void>]> = [
+  const routes: Array<[string, string, (arg0: { [x: string]: string }) => Promise<void>]> = [
 
     // Helpers
     ['GET', pathPrefix + '/ping', async (): Promise<void> => {
@@ -43,6 +43,7 @@ export default async function route(req: IncomingMessage, res: ServerResponse): 
 
     // Users
     ['GET', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.get(req, res)],
+    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(req, res, arg0)],
     ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(req, res)],
     ['PATCH', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.update(req, res)],
     ['DELETE', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.remove(req, res)],
@@ -68,7 +69,7 @@ export default async function route(req: IncomingMessage, res: ServerResponse): 
 
     const matchedPath = (new routeParser(route)).match(urlParts.pathname);
     if (matchedPath) {
-      await handler(urlParts.pathname);
+      await handler(matchedPath);
       return;
     }
   }

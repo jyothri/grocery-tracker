@@ -7,11 +7,11 @@ module.exports = {
   extends: [
     'plugin:@typescript-eslint/recommended',
   ],
-  rules:  {
+  rules: {
     // Overwrite rules specified from the extended configs e.g. 
     // "@typescript-eslint/explicit-function-return-type": "off",
     'comma-spacing': 'error',
-    'indent': ['error', 2],
+    'indent': ['error', 2, { "SwitchCase": 1 }],
     'no-console': 'off',
     'no-multi-spaces': 'error',
     'no-trailing-spaces': 'error',
