@@ -1,8 +1,8 @@
 import { api } from './core/api';
-import { createServer } from 'http';
+import express from 'express';
 
-
-const server = createServer((req, res) => api(req, res));
 const port = 3000;
 console.log(`Server listening on port ${port}`);
-server.listen(port);
+const app = express();
+app.all('/*', (req, res) => api(req, res));
+app.listen(port);

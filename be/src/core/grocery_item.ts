@@ -1,32 +1,32 @@
-import { IncomingMessage, ServerResponse } from 'http';
+import { Request, Response } from 'express';
 
 // Top level entry point
-export async function todo(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function todo(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function create(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function create(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function list(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function list(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function get(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function get(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function update(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function update(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function remove(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function remove(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "To be implemented." }));
 }

@@ -1,10 +1,11 @@
 import routeParser from 'route-parser';
-import { IncomingMessage, ServerResponse } from 'http';
+import { Request, Response } from 'express';
+
 import * as url from 'url';
 import * as user from './user';
 import * as groceryItem from './grocery_item';
 
-export default async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export default async function route(req: Request, res: Response): Promise<void> {
 
   const version = 1;
   const pathPrefix = '/' + 'v' + version;

@@ -1,4 +1,4 @@
-import { IncomingMessage, ServerResponse } from 'http';
+import { Request, Response } from 'express';
 
 class User {
   name?: string; // Unset during createUser request. Set otherwise.
@@ -8,7 +8,7 @@ class User {
   token?: string; // Unset during createUser request. Set otherwise.
 }
 
-export async function create(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function create(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   const user: User = new User();
   user.email = 'abc@example.com';
@@ -18,7 +18,7 @@ export async function create(req: IncomingMessage, res: ServerResponse): Promise
   res.end(JSON.stringify(user));
 }
 
-export async function custom(req: IncomingMessage, res: ServerResponse, arg: { [x: string]: string }): Promise<void> {
+export async function custom(req: Request, res: Response, arg: { [x: string]: string }): Promise<void> {
   if (!arg || !arg['custom_method']) {
     res.statusCode = 404;
     res.end(JSON.stringify({ message: "Not found" }));
@@ -39,17 +39,17 @@ export async function custom(req: IncomingMessage, res: ServerResponse, arg: { [
   }
 }
 
-export async function get(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function get(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "Get: To be implemented." }));
 }
 
-export async function update(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function update(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "Update: To be implemented." }));
 }
 
-export async function remove(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function remove(req: Request, res: Response): Promise<void> {
   res.statusCode = 200;
   res.end(JSON.stringify({ message: "Delete: To be implemented." }));
 }

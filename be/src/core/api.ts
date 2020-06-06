@@ -1,8 +1,8 @@
 import route from './router';
-import { IncomingMessage, ServerResponse } from 'http';
+import { Request, Response } from 'express';
 
 // Top level entry point
-export async function api(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function api(req: Request, res: Response): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
   try {
     await route(req, res);
