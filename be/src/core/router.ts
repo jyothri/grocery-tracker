@@ -5,6 +5,18 @@ import * as url from 'url';
 import * as user from './user';
 import * as groceryItem from './grocery_item';
 
+function getRequestBody(req: Request): Promise<any> {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      resolve(body);
+    });
+  });
+}
+
 export default async function route(req: Request, res: Response): Promise<void> {
 
   const version = 1;
@@ -22,6 +34,16 @@ export default async function route(req: Request, res: Response): Promise<void> 
     res.statusCode = 200;
     res.end();
     return;
+  }
+
+  let validatedUser = null; // eslint-disable-line no-var
+  const rawToken = req.get('Authorization');
+  if (rawToken) {
+    const matchedToken = rawToken.match(/Token (.*)/);
+    if (matchedToken && matchedToken[1]) {
+      console.log(`matchedToken = ${matchedToken}`);
+      validatedUser = await user.authenticateToken(matchedToken[1]);
+    }
   }
 
   // Define routes that can be handled
@@ -43,9 +65,9 @@ export default async function route(req: Request, res: Response): Promise<void> 
     ['DELETE', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
 
     // Users
-    ['GET', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.get(req, res)],
-    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(req, res, arg0)],
-    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(req, res)],
+    ['GET', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.get(arg0, res)],
+    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(await getRequestBody(req), res, arg0)],
+    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(await getRequestBody(req), res)],
     ['PATCH', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.update(req, res)],
     ['DELETE', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.remove(req, res)],
   ];
@@ -70,6 +92,10 @@ export default async function route(req: Request, res: Response): Promise<void> 
 
     const matchedPath = (new routeParser(route)).match(urlParts.pathname);
     if (matchedPath) {
+      if (matchedPath['user_id'] && (!validatedUser || 'users/' + matchedPath['user_id'] !== validatedUser.name)) {
+        res.status(401).send({ errors: { body: ['Token is required'], }, });
+        return;
+      }
       await handler(matchedPath);
       return;
     }

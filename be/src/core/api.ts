@@ -8,7 +8,7 @@ export async function api(req: Request, res: Response): Promise<void> {
     await route(req, res);
   } catch (e) {
     console.log(e);
-    res.statusCode = 422;
+    res.statusCode = 500;
     res.end(JSON.stringify({ errors: { body: [e.message], } }));
   }
 }

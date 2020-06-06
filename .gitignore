@@ -123,3 +123,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+# service-account key
+fridge-inventory-be-18dc2eee6959.json
