@@ -41,8 +41,7 @@ function getUserByEmail(email: string): Promise<User> {
   });
 }
 
-export async function create(body: any, res: Response): Promise<void> {
-  const createUserRequest = JSON.parse(body) as CreateUserRequest;
+export async function create(createUserRequest: CreateUserRequest, res: Response): Promise<void> {
   const userToCreate = createUserRequest.user;
   try {
     validateCreateUserRequest(userToCreate);
@@ -51,7 +50,6 @@ export async function create(body: any, res: Response): Promise<void> {
     res.end(JSON.stringify({ errors: { 'message': err, } }));
     return;
   }
-
   userToCreate.name = 'users' + '/' + crypto.randomBytes(8).toString('hex');
   userToCreate.encryptedPassword = await bcrypt.hash(userToCreate.password, 5);
   userToCreate.password = '';
@@ -85,11 +83,13 @@ export async function get(arg: { [x: string]: string }, res: Response): Promise<
   }
 
   user.token = mintToken(name);
+  user.password = undefined;
+  user.encryptedPassword = undefined;
   res.statusCode = 200;
   res.end(JSON.stringify(user));
 }
 
-export async function custom(body: any, res: Response, arg: { [x: string]: string }): Promise<void> {
+export async function custom(loginUser: User, res: Response, arg: { [x: string]: string }): Promise<void> {
   if (!arg || !arg['custom_method']) {
     res.statusCode = 404;
     res.end(JSON.stringify({ message: "Not found" }));
@@ -99,7 +99,6 @@ export async function custom(body: any, res: Response, arg: { [x: string]: strin
   const customMethod = arg['custom_method'];
   switch (customMethod) {
     case 'login':
-      const loginUser = JSON.parse(body) as User;
       if (!loginUser.email) {
         res.statusCode = 400;
         res.end(JSON.stringify({ errors: { 'message': `email is mandatory`, } }));

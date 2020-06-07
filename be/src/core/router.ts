@@ -1,5 +1,6 @@
 import routeParser from 'route-parser';
 import { Request, Response } from 'express';
+import { CreateUserRequest, User } from './usertypes';
 
 import * as url from 'url';
 import * as user from './user';
@@ -7,12 +8,18 @@ import * as groceryItem from './grocery_item';
 
 function getRequestBody(req: Request): Promise<any> {
   return new Promise((resolve) => {
+    if (req.body) {
+      // cloud functions has req.body already populated.
+      resolve(req.body);
+      return;
+    }
     let body = '';
     req.on('data', (chunk) => {
       body += chunk;
     });
     req.on('end', () => {
-      resolve(body);
+      resolve(JSON.parse(body));
+      return;
     });
   });
 }
@@ -66,8 +73,8 @@ export default async function route(req: Request, res: Response): Promise<void> 
 
     // Users
     ['GET', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.get(arg0, res)],
-    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(await getRequestBody(req), res, arg0)],
-    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(await getRequestBody(req), res)],
+    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(await getRequestBody(req) as User, res, arg0)],
+    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(await getRequestBody(req) as CreateUserRequest, res)],
     ['PATCH', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.update(req, res)],
     ['DELETE', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.remove(req, res)],
   ];
@@ -92,6 +99,7 @@ export default async function route(req: Request, res: Response): Promise<void> 
 
     const matchedPath = (new routeParser(route)).match(urlParts.pathname);
     if (matchedPath) {
+      console.log(`Route for ${method} ${urlParts.pathname}`);
       if (matchedPath['user_id'] && (!validatedUser || 'users/' + matchedPath['user_id'] !== validatedUser.name)) {
         res.status(401).send({ errors: { body: ['Token is required'], }, });
         return;
