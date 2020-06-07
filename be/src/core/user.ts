@@ -144,9 +144,15 @@ export async function update(req: Request, res: Response): Promise<void> {
   res.end(JSON.stringify({ message: "Update: To be implemented." }));
 }
 
-export async function remove(req: Request, res: Response): Promise<void> {
-  res.statusCode = 200;
-  res.end(JSON.stringify({ message: "Delete: To be implemented." }));
+export async function remove(urlPath: { [x: string]: string }, res: Response): Promise<void> {
+  const userPath = apiName + '/users' + '/' + urlPath['user_id'];
+  const userRef = db.collection('users').doc(userPath);
+  const user = await userRef.get();
+  if (!user.exists) {
+    throw new Error(`User not found: [${userPath}]`);
+  }
+  await userRef.delete();
+  res.status(200).end();
 }
 
 export async function authenticateToken(aToken: string): Promise<User> {

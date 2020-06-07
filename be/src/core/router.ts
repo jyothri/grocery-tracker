@@ -76,7 +76,7 @@ export default async function route(req: Request, res: Response): Promise<void> 
     ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(await getRequestBody(req) as User, res, arg0)],
     ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(await getRequestBody(req) as CreateUserRequest, res)],
     ['PATCH', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.update(req, res)],
-    ['DELETE', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.remove(req, res)],
+    ['DELETE', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.remove(arg0, res)],
   ];
 
   if (req.url == undefined) {
