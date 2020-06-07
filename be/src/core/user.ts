@@ -6,39 +6,40 @@ import * as tokenHelper from './token_helper';
 
 
 const apiName = 'api.jkurapati.com';
+const collectionName = 'groceries';
 
 async function verifyEmailIsNotTaken(email: string): Promise<void> {
-  const queryResult = await db.collection('users/' + apiName + '/users').where('email', '==', email).get();
+  const queryResult = await db.collection(collectionName + '/' + apiName + '/users').where('email', '==', email).get();
   if (!queryResult.empty) {
-    throw 'Email already in use.';
+    throw Error('Email already in use.');
   }
 }
 
 async function validateCreateUserRequest(createUser: User): Promise<void> {
   if (createUser.name !== undefined) {
-    throw `user specified resource id [${createUser.name}] not supported.`;
+    throw Error(`user specified resource id [${createUser.name}] not supported.`);
   }
   if (createUser.token !== undefined) {
-    throw `token [${createUser.token}] should not be provided in create request.`;
+    throw Error(`token [${createUser.token}] should not be provided in create request.`);
   }
   if (!createUser.email) {
-    throw 'email is required.';
+    throw Error('email is required.');
   }
   await verifyEmailIsNotTaken(createUser.email);
 }
 
 function getUserByEmail(email: string): Promise<User> {
   return new Promise(async (resolve, reject) => {
-    const queryResult = await db.collection('users/' + apiName + '/users').where('email', '==', email).get();
+    const queryResult = await db.collection(collectionName + '/' + apiName + '/users').where('email', '==', email).get();
     if (queryResult.empty || queryResult.size > 1) {
-      resolve(undefined);
+      reject(Error(`Did not find unique document for ${email}`));
     }
 
     queryResult.forEach(doc => {
       const user = doc.data() as User;
       resolve(user);
     });
-    reject(`this should never happen. ErrorCode 502`);
+    reject(Error(`this should never happen. ErrorCode 502`));
   });
 }
 
@@ -60,7 +61,7 @@ export async function create(createUserRequest: CreateUserRequest): Promise<User
   const docPath = apiName + '/' + userToCreate.name;
 
   console.log('Creating document ', userToCreate.name);
-  const userRef = db.collection('users').doc(docPath);
+  const userRef = db.collection(collectionName).doc(docPath);
   await userRef.set(userToCreate);
 
   prepareForReturn(userToCreate);
@@ -69,7 +70,7 @@ export async function create(createUserRequest: CreateUserRequest): Promise<User
 
 export async function get(userName: string): Promise<User> {
   const name = apiName + '/' + userName;
-  const docRef = db.collection('users').doc(name);
+  const docRef = db.collection(collectionName).doc(name);
   const findResult = await docRef.get();
   const user = findResult.data();
   if (!user) {
@@ -114,7 +115,7 @@ export async function update(body: UpdateUserRequest, arg: { [x: string]: string
     throw Error(`Invalid request. Missing name field.`);
   }
   const name = apiName + '/users' + '/' + user.name;
-  const docRef = db.collection('users').doc(name);
+  const docRef = db.collection(collectionName).doc(name);
   const findResult = await docRef.get();
   if (!findResult.exists) {
     throw Error(`User not found: [${user.name}]`);
@@ -149,7 +150,7 @@ export async function update(body: UpdateUserRequest, arg: { [x: string]: string
 
 export async function remove(urlPath: { [x: string]: string }): Promise<void> {
   const userPath = apiName + '/users' + '/' + urlPath['user_id'];
-  const userRef = db.collection('users').doc(userPath);
+  const userRef = db.collection(collectionName).doc(userPath);
   const user = await userRef.get();
   if (!user.exists) {
     throw Error(`User not found: [${userPath}]`);

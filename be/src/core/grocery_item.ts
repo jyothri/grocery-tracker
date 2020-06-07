@@ -4,6 +4,7 @@ import { db } from '../cloud/firestore';
 import { CreateGroceryItemRequest, GroceryItem } from './groceryitemtypes';
 
 const apiName = 'api.jkurapati.com';
+const collectionName = 'groceries';
 
 // Top level entry point
 export async function todo(req: Request, res: Response): Promise<void> {
@@ -17,7 +18,7 @@ export async function create(createGroceryItemRequest: CreateGroceryItemRequest)
   const docPath = apiName + '/' + toCreate.name;
 
   console.log('Creating document ', toCreate.name);
-  const userRef = db.collection(apiName).doc(docPath);
+  const userRef = db.collection(collectionName).doc(docPath);
   await userRef.set(toCreate);
   return toCreate;
 }
