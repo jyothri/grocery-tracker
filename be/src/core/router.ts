@@ -54,7 +54,14 @@ export default async function route(req: Request, res: Response): Promise<void> 
     }],
 
     // GroceryItems
-    ['GET', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['GET', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (arg): Promise<void> => {
+      if (!arg || !arg['user_id'] || !arg['grocery_item_id']) {
+        res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
+        return;
+      }
+      const retrievedGroceryItem = await groceryItem.get(arg['user_id'], arg['grocery_item_id']);
+      res.status(200).end(JSON.stringify(retrievedGroceryItem));
+    }],
     ['GET', pathPrefix + '/users/:user_id/groceryitems', async (): Promise<void> => await groceryItem.todo(req, res)],
     ['POST', pathPrefix + '/users/:user_id/groceryitems', async (): Promise<void> => {
       const createdGroceryItem = await groceryItem.create(req.body as CreateGroceryItemRequest);

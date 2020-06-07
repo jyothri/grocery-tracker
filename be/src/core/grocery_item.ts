@@ -30,9 +30,15 @@ export async function list(req: Request, res: Response): Promise<void> {
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function get(req: Request, res: Response): Promise<void> {
-  res.statusCode = 200;
-  res.end(JSON.stringify({ message: "To be implemented." }));
+export async function get(userName: string, groceryItemName: string): Promise<GroceryItem> {
+  const name = apiName + '/users/' + userName + '/groceryitems/' + groceryItemName;
+  const docRef = db.collection(collectionName).doc(name);
+  const findResult = await docRef.get();
+  const groceryItem = findResult.data() as GroceryItem;
+  if (!groceryItem) {
+    throw Error(`groceryItem not found: [${name}]`);
+  }
+  return groceryItem;
 }
 
 export async function update(req: Request, res: Response): Promise<void> {

@@ -3,7 +3,7 @@ export interface GroceryItem {
   groceryItemName: string;
   expirationDate: string;
   purchaseDate: string;
-  quantity: Number;
+  quantity: number;
   description?: string;
   createTime: string;
   updateTime: string;
