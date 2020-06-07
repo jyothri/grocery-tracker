@@ -6,24 +6,6 @@ import * as url from 'url';
 import * as user from './user';
 import * as groceryItem from './grocery_item';
 
-function getRequestBody(req: Request): Promise<any> {
-  return new Promise((resolve) => {
-    if (req.body) {
-      // cloud functions has req.body already populated.
-      resolve(req.body);
-      return;
-    }
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk;
-    });
-    req.on('end', () => {
-      resolve(JSON.parse(body));
-      return;
-    });
-  });
-}
-
 export default async function route(req: Request, res: Response): Promise<void> {
 
   const version = 1;
@@ -73,8 +55,8 @@ export default async function route(req: Request, res: Response): Promise<void> 
 
     // Users
     ['GET', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.get(arg0, res)],
-    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(await getRequestBody(req) as User, res, arg0)],
-    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(await getRequestBody(req) as CreateUserRequest, res)],
+    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(req.body as User, res, arg0)],
+    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(req.body as CreateUserRequest, res)],
     ['PATCH', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.update(req, res)],
     ['DELETE', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.remove(arg0, res)],
   ];
