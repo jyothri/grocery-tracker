@@ -1,6 +1,6 @@
 import routeParser from 'route-parser';
 import { Request, Response } from 'express';
-import { CreateUserRequest, User } from './usertypes';
+import { CreateUserRequest, UpdateUserRequest, User } from './usertypes';
 
 import * as url from 'url';
 import * as user from './user';
@@ -57,7 +57,7 @@ export default async function route(req: Request, res: Response): Promise<void> 
     ['GET', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.get(arg0, res)],
     ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(req.body as User, res, arg0)],
     ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(req.body as CreateUserRequest, res)],
-    ['PATCH', pathPrefix + '/users/:user_id', async (): Promise<void> => await user.update(req, res)],
+    ['PATCH', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.update(req.body as UpdateUserRequest, arg0, res)],
     ['DELETE', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.remove(arg0, res)],
   ];
 

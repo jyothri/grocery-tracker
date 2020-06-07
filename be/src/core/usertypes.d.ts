@@ -16,3 +16,12 @@ export interface GetUserRequest {
   // format: "users/user1"
   name: string;
 }
+
+export interface UpdateUserRequest {
+  user: User;
+  mask: UpdateUserFieldMask;
+}
+
+export interface UpdateUserFieldMask {
+  paths: string[];
+}

@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { db } from '../cloud/firestore';
 import crypto from 'crypto';
-import { CreateUserRequest, User } from './usertypes';
+import { CreateUserRequest, User, UpdateUserRequest } from './usertypes';
 
 
 const tokenSecret = process.env.SECRET ? process.env.SECRET : '3ee058420bc2';
@@ -17,13 +17,24 @@ function mintToken(aUsername: string): string {
   });
 }
 
-function validateCreateUserRequest(createUser: User): void {
+async function verifyEmailIsNotTaken(email: string): Promise<void> {
+  const queryResult = await db.collection('users/' + apiName + '/users').where('email', '==', email).get();
+  if (!queryResult.empty) {
+    throw 'Email already in use.';
+  }
+}
+
+async function validateCreateUserRequest(createUser: User): Promise<void> {
   if (createUser.name !== undefined) {
     throw `user specified resource id [${createUser.name}] not supported.`;
   }
   if (createUser.token !== undefined) {
     throw `token [${createUser.token}] should not be provided in create request.`;
   }
+  if (!createUser.email) {
+    throw 'email is required.';
+  }
+  await verifyEmailIsNotTaken(createUser.email);
 }
 
 function getUserByEmail(email: string): Promise<User> {
@@ -44,7 +55,7 @@ function getUserByEmail(email: string): Promise<User> {
 export async function create(createUserRequest: CreateUserRequest, res: Response): Promise<void> {
   const userToCreate = createUserRequest.user;
   try {
-    validateCreateUserRequest(userToCreate);
+    await validateCreateUserRequest(userToCreate);
   } catch (err) {
     res.statusCode = 400;
     res.end(JSON.stringify({ errors: { 'message': err, } }));
@@ -139,9 +150,47 @@ export async function custom(loginUser: User, res: Response, arg: { [x: string]:
   }
 }
 
-export async function update(req: Request, res: Response): Promise<void> {
-  res.statusCode = 200;
-  res.end(JSON.stringify({ message: "Update: To be implemented." }));
+export async function update(body: UpdateUserRequest, arg: { [x: string]: string }, res: Response): Promise<void> {
+  const user = body.user;
+  user.name = arg['user_id'];
+  if (!user.name) {
+    res.status(404).end(JSON.stringify({ message: "Invalid request. Missing name field." }));
+    return;
+  }
+  const name = apiName + '/users' + '/' + user.name;
+  const docRef = db.collection('users').doc(name);
+  const findResult = await docRef.get();
+  if (!findResult.exists) {
+    throw new Error(`User not found: [${user.name}]`);
+  }
+
+  const dbUser = findResult.data() as User;
+  const paths = body.mask.paths;
+  const pathSet = new Set();
+  for (const path of paths) {
+    pathSet.add(path);
+  }
+
+  // Make requested mutations
+  if (pathSet.has('user.email')) {
+    if (!user.email) {
+      throw new Error('email cannot be updated to blank value.');
+    }
+    await verifyEmailIsNotTaken(user.email);
+    dbUser.email = user.email;
+  }
+  if (pathSet.has('user.password')) {
+    dbUser.password = await bcrypt.hash(user.password, 5);
+  }
+  await docRef.set(dbUser);
+  const updatedUser = (await docRef.get()).data() as User;
+  if (!updatedUser.name) {
+    throw new Error(`name field is blank in db for user. This should never happen.`);
+  }
+  updatedUser.encryptedPassword = undefined;
+  updatedUser.password = undefined;
+  updatedUser.token = mintToken(updatedUser.name);
+  res.status(200).end(JSON.stringify(updatedUser));
 }
 
 export async function remove(urlPath: { [x: string]: string }, res: Response): Promise<void> {
