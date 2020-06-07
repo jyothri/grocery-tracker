@@ -59,16 +59,42 @@ export default async function route(req: Request, res: Response): Promise<void> 
         res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
         return;
       }
-      const retrievedGroceryItem = await groceryItem.get(arg['user_id'], arg['grocery_item_id']);
-      res.status(200).end(JSON.stringify(retrievedGroceryItem));
+      try {
+        const retrievedGroceryItem = await groceryItem.get(arg['user_id'], arg['grocery_item_id']);
+        res.status(200).end(JSON.stringify(retrievedGroceryItem));
+      } catch (e) {
+        res.status(404).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
     }],
-    ['GET', pathPrefix + '/users/:user_id/groceryitems', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['GET', pathPrefix + '/users/:user_id/groceryitems', async (arg): Promise<void> => {
+      if (!arg || !arg['user_id']) {
+        res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
+        return;
+      }
+      try {
+        const retrievedGroceryItems = await groceryItem.list(arg['user_id']);
+        res.status(200).end(JSON.stringify(Array.from(retrievedGroceryItems.values())));
+      } catch (e) {
+        res.status(404).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
     ['POST', pathPrefix + '/users/:user_id/groceryitems', async (): Promise<void> => {
       const createdGroceryItem = await groceryItem.create(req.body as CreateGroceryItemRequest);
       res.status(200).end(JSON.stringify(createdGroceryItem));
     }],
     ['PATCH', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
-    ['DELETE', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['DELETE', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (arg): Promise<void> => {
+      try {
+        if (!arg || !arg['user_id'] || !arg['grocery_item_id']) {
+          res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
+          return;
+        }
+        await groceryItem.remove(arg['user_id'], arg['grocery_item_id']);
+        res.status(200).end();
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
 
     // Users
     ['GET', pathPrefix + '/users/:user_id', async (arg): Promise<void> => {

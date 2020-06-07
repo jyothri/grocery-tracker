@@ -25,9 +25,17 @@ export async function create(createGroceryItemRequest: CreateGroceryItemRequest)
   return toCreate;
 }
 
-export async function list(req: Request, res: Response): Promise<void> {
-  res.statusCode = 200;
-  res.end(JSON.stringify({ message: "To be implemented." }));
+export async function list(userName: string): Promise<Set<GroceryItem>> {
+  const queryResult = await db.collection(collectionName + '/' + apiName + '/users/' + userName + '/groceryitems').get();
+  if (queryResult.empty) {
+    throw Error(`Did not find any grocery items for ${userName}`);
+  }
+  const set: Set<GroceryItem> = new Set();
+  queryResult.forEach(doc => {
+    const groceryItem = doc.data() as GroceryItem;
+    set.add(groceryItem);
+  });
+  return set;
 }
 
 export async function get(userName: string, groceryItemName: string): Promise<GroceryItem> {
@@ -46,7 +54,13 @@ export async function update(req: Request, res: Response): Promise<void> {
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function remove(req: Request, res: Response): Promise<void> {
-  res.statusCode = 200;
-  res.end(JSON.stringify({ message: "To be implemented." }));
+export async function remove(userName: string, groceryItemName: string): Promise<void> {
+  const name = apiName + '/users/' + userName + '/groceryitems/' + groceryItemName;
+  const docRef = db.collection(collectionName).doc(name);
+  const findResult = await docRef.get();
+  const groceryItem = findResult.data() as GroceryItem;
+  if (!groceryItem) {
+    throw Error(`groceryItem not found: [${name}]`);
+  }
+  await docRef.delete();
 }
