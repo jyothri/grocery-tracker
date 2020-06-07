@@ -1,4 +1,9 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
+import { db } from '../cloud/firestore';
+import { CreateGroceryItemRequest, GroceryItem } from './groceryitemtypes';
+
+const apiName = 'api.jkurapati.com';
 
 // Top level entry point
 export async function todo(req: Request, res: Response): Promise<void> {
@@ -6,9 +11,15 @@ export async function todo(req: Request, res: Response): Promise<void> {
   res.end(JSON.stringify({ message: "To be implemented." }));
 }
 
-export async function create(req: Request, res: Response): Promise<void> {
-  res.statusCode = 200;
-  res.end(JSON.stringify({ message: "To be implemented." }));
+export async function create(createGroceryItemRequest: CreateGroceryItemRequest): Promise<GroceryItem> {
+  const toCreate = createGroceryItemRequest.groceryItem;
+  toCreate.name = createGroceryItemRequest.parent + '/' + 'groceryitems' + '/' + crypto.randomBytes(8).toString('hex');
+  const docPath = apiName + '/' + toCreate.name;
+
+  console.log('Creating document ', toCreate.name);
+  const userRef = db.collection(apiName).doc(docPath);
+  await userRef.set(toCreate);
+  return toCreate;
 }
 
 export async function list(req: Request, res: Response): Promise<void> {

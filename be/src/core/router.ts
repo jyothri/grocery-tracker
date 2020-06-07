@@ -1,6 +1,7 @@
 import routeParser from 'route-parser';
 import { Request, Response } from 'express';
 import { CreateUserRequest, UpdateUserRequest, User } from './usertypes';
+import { CreateGroceryItemRequest } from './groceryitemtypes';
 import * as tokenHelper from './token_helper';
 
 import * as url from 'url';
@@ -55,7 +56,10 @@ export default async function route(req: Request, res: Response): Promise<void> 
     // GroceryItems
     ['GET', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
     ['GET', pathPrefix + '/users/:user_id/grocery_items', async (): Promise<void> => await groceryItem.todo(req, res)],
-    ['POST', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['POST', pathPrefix + '/users/:user_id/grocery_items', async (): Promise<void> => {
+      const createdGroceryItem = await groceryItem.create(req.body as CreateGroceryItemRequest);
+      res.status(200).end(JSON.stringify(createdGroceryItem));
+    }],
     ['PATCH', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
     ['DELETE', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
 
