@@ -15,6 +15,8 @@ export async function todo(req: Request, res: Response): Promise<void> {
 export async function create(createGroceryItemRequest: CreateGroceryItemRequest): Promise<GroceryItem> {
   const toCreate = createGroceryItemRequest.groceryItem;
   toCreate.name = createGroceryItemRequest.parent + '/' + 'groceryitems' + '/' + crypto.randomBytes(8).toString('hex');
+  toCreate.createTime = new Date().toDateString();
+  toCreate.updateTime = new Date().toDateString();
   const docPath = apiName + '/' + toCreate.name;
 
   console.log('Creating document ', toCreate.name);

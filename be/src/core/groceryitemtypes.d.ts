@@ -1,10 +1,12 @@
-export class GroceryItem {
-  name?: string; // Unset during createUser request. Set otherwise. Format: "users/user1"
-  email?: string; // Optional
-  password?: string; // Mandatory only for login
-  image?: string; // Optional
-  token?: string; // Unset during createUser request. Set otherwise.
-  encryptedPassword?: string // Set for db operations only. Not exposed to API.
+export interface GroceryItem {
+  name?: string; // Unset during CreateGroceryItem request. Set otherwise. Format: "users/user1/groceryitems/gitem1"
+  groceryItemName: string;
+  expirationDate: string;
+  purchaseDate: string;
+  quantity: Number;
+  description?: string;
+  createTime: string;
+  updateTime: string;
 }
 
 export interface CreateGroceryItemRequest {

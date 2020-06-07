@@ -54,14 +54,14 @@ export default async function route(req: Request, res: Response): Promise<void> 
     }],
 
     // GroceryItems
-    ['GET', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
-    ['GET', pathPrefix + '/users/:user_id/grocery_items', async (): Promise<void> => await groceryItem.todo(req, res)],
-    ['POST', pathPrefix + '/users/:user_id/grocery_items', async (): Promise<void> => {
+    ['GET', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['GET', pathPrefix + '/users/:user_id/groceryitems', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['POST', pathPrefix + '/users/:user_id/groceryitems', async (): Promise<void> => {
       const createdGroceryItem = await groceryItem.create(req.body as CreateGroceryItemRequest);
       res.status(200).end(JSON.stringify(createdGroceryItem));
     }],
-    ['PATCH', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
-    ['DELETE', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['PATCH', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['DELETE', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
 
     // Users
     ['GET', pathPrefix + '/users/:user_id', async (arg): Promise<void> => {
