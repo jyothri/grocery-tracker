@@ -1,6 +1,7 @@
 import routeParser from 'route-parser';
 import { Request, Response } from 'express';
 import { CreateUserRequest, UpdateUserRequest, User } from './usertypes';
+import * as tokenHelper from './token_helper';
 
 import * as url from 'url';
 import * as user from './user';
@@ -30,8 +31,13 @@ export default async function route(req: Request, res: Response): Promise<void> 
   if (rawToken) {
     const matchedToken = rawToken.match(/Token (.*)/);
     if (matchedToken && matchedToken[1]) {
-      console.log(`matchedToken = ${matchedToken}`);
-      validatedUser = await user.authenticateToken(matchedToken[1]);
+      try {
+        const username = tokenHelper.getUserNameFromToken(matchedToken[1]);
+        validatedUser = await user.get(username);
+      } catch (err) {
+        res.status(401).send({ errors: { body: [err.message], }, });
+        return;
+      }
     }
   }
 
@@ -54,11 +60,55 @@ export default async function route(req: Request, res: Response): Promise<void> 
     ['DELETE', pathPrefix + '/users/:user_id/grocery_items/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
 
     // Users
-    ['GET', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.get(arg0, res)],
-    ['POST', pathPrefix + '/users/:custom_method', async (arg0): Promise<void> => await user.custom(req.body as User, res, arg0)],
-    ['POST', pathPrefix + '/users', async (): Promise<void> => await user.create(req.body as CreateUserRequest, res)],
-    ['PATCH', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.update(req.body as UpdateUserRequest, arg0, res)],
-    ['DELETE', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => await user.remove(arg0, res)],
+    ['GET', pathPrefix + '/users/:user_id', async (arg): Promise<void> => {
+      if (!arg || !arg['user_id']) {
+        res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
+        return;
+      }
+      try {
+        const retrievedUser = await user.get('users' + '/' + arg['user_id']);
+        res.status(200).end(JSON.stringify(retrievedUser));
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
+    ['POST', pathPrefix + '/users/:custom_method', async (arg): Promise<void> => {
+      try {
+        if (!arg || !arg['custom_method']) {
+          res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
+          return;
+        }
+        const updatedUser = await user.custom(req.body as User, arg['custom_method']);
+        res.status(200).end(JSON.stringify(updatedUser));
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
+    ['POST', pathPrefix + '/users', async (): Promise<void> => {
+      try {
+        const createdUser = await user.create(req.body as CreateUserRequest);
+        res.status(200).end(JSON.stringify(createdUser));
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
+    ['PATCH', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => {
+      try {
+        const updatedUser = await user.update(req.body as UpdateUserRequest, arg0);
+        res.status(200).end(JSON.stringify(updatedUser));
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
+    ['DELETE', pathPrefix + '/users/:user_id', async (arg0): Promise<void> => {
+      try {
+        await user.remove(arg0);
+        res.status(200).end();
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+
+    }],
   ];
 
   if (req.url == undefined) {
@@ -81,10 +131,16 @@ export default async function route(req: Request, res: Response): Promise<void> 
 
     const matchedPath = (new routeParser(route)).match(urlParts.pathname);
     if (matchedPath) {
-      console.log(`Route for ${method} ${urlParts.pathname}`);
-      if (matchedPath['user_id'] && (!validatedUser || 'users/' + matchedPath['user_id'] !== validatedUser.name)) {
-        res.status(401).send({ errors: { body: ['Token is required'], }, });
-        return;
+      if (matchedPath['user_id']) {
+        if (!validatedUser) {
+          res.status(401).send({ errors: { body: ['Unauthorized: Token is required'], }, });
+          return;
+        }
+        const userName = 'users/' + matchedPath['user_id'];
+        if (userName !== validatedUser.name) {
+          res.status(403).send({ errors: { body: ['Forbidden: Token invalid'], }, });
+          return;
+        }
       }
       await handler(matchedPath);
       return;
@@ -92,8 +148,5 @@ export default async function route(req: Request, res: Response): Promise<void> 
   }
 
   // No routes were matched, respond with 404
-  res.statusCode = 404;
-  res.end(JSON.stringify({ errors: { body: `[404 Not found: [${req.method} ${req.url} ]]`, }, }));
-  return;
-
+  res.status(404).end(JSON.stringify({ errors: { body: `[404 Not found: [${req.method} ${req.url} ]]`, }, }));
 }

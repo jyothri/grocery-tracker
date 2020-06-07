@@ -1,21 +1,11 @@
-import { Response } from 'express';
-import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { db } from '../cloud/firestore';
 import crypto from 'crypto';
 import { CreateUserRequest, User, UpdateUserRequest } from './usertypes';
+import * as tokenHelper from './token_helper';
 
 
-const tokenSecret = process.env.SECRET ? process.env.SECRET : '3ee058420bc2';
 const apiName = 'api.jkurapati.com';
-
-function mintToken(aUsername: string): string {
-  return jwt.sign({
-    username: aUsername
-  }, tokenSecret, {
-    expiresIn: '2 days'
-  });
-}
 
 async function verifyEmailIsNotTaken(email: string): Promise<void> {
   const queryResult = await db.collection('users/' + apiName + '/users').where('email', '==', email).get();
@@ -52,15 +42,18 @@ function getUserByEmail(email: string): Promise<User> {
   });
 }
 
-export async function create(createUserRequest: CreateUserRequest, res: Response): Promise<void> {
-  const userToCreate = createUserRequest.user;
-  try {
-    await validateCreateUserRequest(userToCreate);
-  } catch (err) {
-    res.statusCode = 400;
-    res.end(JSON.stringify({ errors: { 'message': err, } }));
-    return;
+function prepareForReturn(user: User): void {
+  if (!user.name) {
+    throw Error('name is not defined. This should never happen.');
   }
+  user.token = tokenHelper.mintToken(user.name);
+  user.password = undefined;
+  user.encryptedPassword = undefined;
+}
+
+export async function create(createUserRequest: CreateUserRequest): Promise<User> {
+  const userToCreate = createUserRequest.user;
+  await validateCreateUserRequest(userToCreate);
   userToCreate.name = 'users' + '/' + crypto.randomBytes(8).toString('hex');
   userToCreate.encryptedPassword = await bcrypt.hash(userToCreate.password, 5);
   userToCreate.password = '';
@@ -70,98 +63,61 @@ export async function create(createUserRequest: CreateUserRequest, res: Response
   const userRef = db.collection('users').doc(docPath);
   await userRef.set(userToCreate);
 
-  userToCreate.token = mintToken(userToCreate.name);
-  userToCreate.password = undefined;
-  userToCreate.encryptedPassword = undefined;
-  res.statusCode = 200;
-  res.end(JSON.stringify(userToCreate));
+  prepareForReturn(userToCreate);
+  return userToCreate;
 }
 
-export async function get(arg: { [x: string]: string }, res: Response): Promise<void> {
-  if (!arg || !arg['user_id']) {
-    res.statusCode = 404;
-    res.end(JSON.stringify({ message: "Not found" }));
-    return;
-  }
-  const name = apiName + '/users' + '/' + arg['user_id'];
+export async function get(userName: string): Promise<User> {
+  const name = apiName + '/' + userName;
   const docRef = db.collection('users').doc(name);
   const findResult = await docRef.get();
   const user = findResult.data();
   if (!user) {
-    res.statusCode = 400;
-    res.end(JSON.stringify({ errors: { 'message': `User not found: [${name}]`, } }));
-    return;
+    throw Error(`User not found: [${name}]`);
   }
-
-  user.token = mintToken(name);
-  user.password = undefined;
-  user.encryptedPassword = undefined;
-  res.statusCode = 200;
-  res.end(JSON.stringify(user));
+  prepareForReturn(user);
+  return user;
 }
 
-export async function custom(loginUser: User, res: Response, arg: { [x: string]: string }): Promise<void> {
-  if (!arg || !arg['custom_method']) {
-    res.statusCode = 404;
-    res.end(JSON.stringify({ message: "Not found" }));
-    return;
-  }
-
-  const customMethod = arg['custom_method'];
+export async function custom(loginUser: User, customMethod: string): Promise<User> {
   switch (customMethod) {
     case 'login':
       if (!loginUser.email) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ errors: { 'message': `email is mandatory`, } }));
-        return;
+        throw Error(`email is mandatory`);
       }
 
       const foundUser = await getUserByEmail(loginUser.email);
       if (!foundUser || !foundUser.encryptedPassword) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ errors: { 'message': `invalid email ${loginUser.email}`, } }));
-        return;
+        throw Error(`credentials not found for [${loginUser.email}]. This should never happen.`);
       }
 
       if (!foundUser.name) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ errors: { 'message': 'name in document should always exist', } }));
-        return;
+        throw Error(`name not found for [${loginUser.email}]. This should never happen.`);
       }
 
       const passwordCheckResult = await bcrypt.compare(loginUser.password, foundUser.encryptedPassword);
       if (!passwordCheckResult) {
-        res.statusCode = 404;
-        res.end(JSON.stringify({ message: "Incorrect password" }));
-        return;
+        throw Error(`Invalid password.`);
       }
 
-      foundUser.token = mintToken(foundUser.name);
-      foundUser.password = undefined;
-      foundUser.encryptedPassword = undefined;
-
-      res.statusCode = 200;
-      res.end(JSON.stringify(foundUser));
-      return;
+      prepareForReturn(foundUser);
+      return foundUser;
     default:
-      res.statusCode = 404;
-      res.end(JSON.stringify({ message: "Not found. Invalid custom method." }));
-      return;
+      throw Error(`Not found. Invalid custom method ${customMethod}.`);
   }
 }
 
-export async function update(body: UpdateUserRequest, arg: { [x: string]: string }, res: Response): Promise<void> {
+export async function update(body: UpdateUserRequest, arg: { [x: string]: string }): Promise<User> {
   const user = body.user;
   user.name = arg['user_id'];
   if (!user.name) {
-    res.status(404).end(JSON.stringify({ message: "Invalid request. Missing name field." }));
-    return;
+    throw Error(`Invalid request. Missing name field.`);
   }
   const name = apiName + '/users' + '/' + user.name;
   const docRef = db.collection('users').doc(name);
   const findResult = await docRef.get();
   if (!findResult.exists) {
-    throw new Error(`User not found: [${user.name}]`);
+    throw Error(`User not found: [${user.name}]`);
   }
 
   const dbUser = findResult.data() as User;
@@ -174,7 +130,7 @@ export async function update(body: UpdateUserRequest, arg: { [x: string]: string
   // Make requested mutations
   if (pathSet.has('user.email')) {
     if (!user.email) {
-      throw new Error('email cannot be updated to blank value.');
+      throw Error('email cannot be updated to blank value.');
     }
     await verifyEmailIsNotTaken(user.email);
     dbUser.email = user.email;
@@ -185,34 +141,18 @@ export async function update(body: UpdateUserRequest, arg: { [x: string]: string
   await docRef.set(dbUser);
   const updatedUser = (await docRef.get()).data() as User;
   if (!updatedUser.name) {
-    throw new Error(`name field is blank in db for user. This should never happen.`);
+    throw Error(`name field is blank in db for user. This should never happen.`);
   }
-  updatedUser.encryptedPassword = undefined;
-  updatedUser.password = undefined;
-  updatedUser.token = mintToken(updatedUser.name);
-  res.status(200).end(JSON.stringify(updatedUser));
+  prepareForReturn(updatedUser);
+  return updatedUser;
 }
 
-export async function remove(urlPath: { [x: string]: string }, res: Response): Promise<void> {
+export async function remove(urlPath: { [x: string]: string }): Promise<void> {
   const userPath = apiName + '/users' + '/' + urlPath['user_id'];
   const userRef = db.collection('users').doc(userPath);
   const user = await userRef.get();
   if (!user.exists) {
-    throw new Error(`User not found: [${userPath}]`);
+    throw Error(`User not found: [${userPath}]`);
   }
   await userRef.delete();
-  res.status(200).end();
-}
-
-export async function authenticateToken(aToken: string): Promise<User> {
-  const decoded = jwt.verify(aToken, tokenSecret) as any;
-  const username = decoded.username;
-  const docPath = apiName + '/' + username;
-  const userRef = db.collection('users').doc(docPath);
-  const findResult = await userRef.get();
-  if (!findResult.exists) {
-    throw new Error('Invalid token');
-  }
-  const foundUser = findResult.data() as User;
-  return foundUser;
 }

@@ -9,6 +9,6 @@ export async function api(req: Request, res: Response): Promise<void> {
   } catch (e) {
     console.log(e);
     res.statusCode = 500;
-    res.end(JSON.stringify({ errors: { body: [e.message], } }));
+    res.end(JSON.stringify({ errors: { body: [e, e.message], } }));
   }
 }
