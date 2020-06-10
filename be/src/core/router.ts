@@ -1,7 +1,7 @@
 import routeParser from 'route-parser';
 import { Request, Response } from 'express';
 import { CreateUserRequest, UpdateUserRequest, User } from './usertypes';
-import { CreateGroceryItemRequest } from './groceryitemtypes';
+import { CreateGroceryItemRequest, UpdateGroceryItemRequest } from './groceryitemtypes';
 import * as tokenHelper from './token_helper';
 
 import * as url from 'url';
@@ -82,7 +82,18 @@ export default async function route(req: Request, res: Response): Promise<void> 
       const createdGroceryItem = await groceryItem.create(req.body as CreateGroceryItemRequest);
       res.status(200).end(JSON.stringify(createdGroceryItem));
     }],
-    ['PATCH', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (): Promise<void> => await groceryItem.todo(req, res)],
+    ['PATCH', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (arg): Promise<void> => {
+      try {
+        if (!arg || !arg['user_id'] || !arg['grocery_item_id']) {
+          res.status(404).end(JSON.stringify({ errors: { body: ["Not found"], } }));
+          return;
+        }
+        const updatedGroceryItem = await groceryItem.update(arg['user_id'], arg['grocery_item_id'], req.body as UpdateGroceryItemRequest);
+        res.status(200).end(JSON.stringify(updatedGroceryItem));
+      } catch (e) {
+        res.status(400).end(JSON.stringify({ errors: { body: [e.message], } }));
+      }
+    }],
     ['DELETE', pathPrefix + '/users/:user_id/groceryitems/:grocery_item_id', async (arg): Promise<void> => {
       try {
         if (!arg || !arg['user_id'] || !arg['grocery_item_id']) {
