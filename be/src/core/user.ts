@@ -155,5 +155,14 @@ export async function remove(urlPath: { [x: string]: string }): Promise<void> {
   if (!user.exists) {
     throw Error(`User not found: [${userPath}]`);
   }
+
+  const subCollection = await db.collection(collectionName).doc(userPath).listCollections();
+  subCollection.forEach(async (coll) => {
+    const subCollections = await db.collection(collectionName).doc(userPath).collection(coll.id).get();
+    subCollections.forEach(async (doc) => {
+      await db.collection(collectionName).doc(apiName + '/' + doc.data().name).delete();
+    });
+  });
+
   await userRef.delete();
 }
